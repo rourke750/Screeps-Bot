@@ -1,18 +1,18 @@
 const pathFinder = require('pathFinder');
 
-let filtered_mapping = {};
-let filtered_homeroom_mappings = {};
-
 var utils = {
     movement_options: {visualizePathStyle: {stroke: '#ffffff'}, reusePath: 10, ignoreCreeps: true},
     movement_collision: {visualizePathStyle: {stroke: '#ffffff'}, reusePath: 10, ignoreCreeps: false},
 
-    get_scout_count: function() {
+    get_claimer_count: function() {
         let count = 0;
         for (const k in Memory.flags.reserve) {
             count += 2;
         }
         for (const k in Memory.flags.capture) {
+            count += 1;
+        }
+        for (const k in Memory.flags.captureAuto) {
             count += 1;
         }
         return count;
@@ -397,8 +397,13 @@ var utils = {
         if (creep.memory.last_pos != null && creep.pos.isEqualTo(creep.memory.last_pos.x, creep.memory.last_pos.y) 
             && creep.fatigue == 0 && avoidCreepIfStuck) {
             // get the path we are currently traveling
+            
             const sePath = creep.memory.current_path[creep.room.name];
             if (sePath != "" && sePath != null) {
+                
+            if (creep.name == 'Claimer83533332') {
+                console.log(JSON.stringify(creep.memory.current_path))
+            }
                 const oldPath = Room.deserializePath(sePath);
                 const finalDest = oldPath[oldPath.length - 1];
                 // now we can take the old path get the last element and go there
@@ -430,7 +435,7 @@ var utils = {
                 const newP = pathFinder.find_path_in_room(creep, v[0], v[1]);
                 creep.memory.current_path[creep.pos.roomName] = newP;
             } else {
-                console.log('eeeeeeeeeeeeeeeeeeek utils')
+                console.log('utils creep could not find path to destination clearing ' + creep.name)
                 utils.cleanup_move_to(creep);
                 return;
             }

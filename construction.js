@@ -19,7 +19,7 @@ var construction = {
 
     build_missing_spawn: function(roomName) {
         const room = Game.rooms[roomName];
-        if (!room) {
+        if (!room || !room.controller) {
             return;
         }
         if (room.controller.my && room.memory.spawnMaster == null && room.name in Memory.flags.capture) {
@@ -37,7 +37,6 @@ var construction = {
             room.memory['spawnMasterX'] = f.pos.x;
             room.memory['spawnMasterY'] = f.pos.y;
             room.memory['spawnMaster'] = `${room.name}-1`;
-            this.buildSpawnCenter(room);
             f.remove();
         }
     },
@@ -145,13 +144,16 @@ var construction = {
     },
 
     // This function handles building the spawn
-    buildSpawnCenter: function(room) {
-        if (construction.doesMemoryExistConstructon(room.name, 'spawns')) {
+    buildSpawnCenter: function(roomName) {
+        const room = Game.rooms[roomName];
+        if (!room) 
+            return;
+        if (construction.doesMemoryExistConstructon(roomName, 'spawns')) {
             return;
         }
 
         let maxSpawns = 1;
-        if (!room.controller.my) {
+        if (!room.controller || !room.controller.my) {
             return;
         } else if (room.controller.level == 7) {
             maxSpawns = 2;
@@ -181,8 +183,9 @@ var construction = {
 
         const paths = [];
 
-        // check if the master spawn is still there, if not rebuild it 
-        if (room.memory.spawnMaster != null && !Game.spawns[room.memory.spawnMaster]) {
+        // check if the master spawn is still there or if it was ever there, if not rebuild it 
+        if ((room.memory.spawnMaster == null && room.memory.spawnMasterX != null) || 
+            (room.memory.spawnMaster != null && !Game.spawns[room.memory.spawnMaster])) {
             // we are missing the master spawn rebuild it
             const n = `${room.name}-1`;
             // room.getPositionAt(room.memory.spawnMasterX, room.memory.spawnMasterY).createConstructionSite(STRUCTURE_SPAWN, n);
@@ -237,6 +240,9 @@ var construction = {
         }
         */
         //pos.createFlag();
+        if (!source.room.controller) {
+            return;
+        }
                 
         if (!((Game.time + 40) % 1000 == 0 && source.room.controller.level >= 6)) {
             return
@@ -348,7 +354,7 @@ var construction = {
     
     build_extensions: function(room) {
 
-        if (!room.controller.my)
+        if (!room.controller || !room.controller.my)
             return;
 
         // todo build that cool design i saw 
@@ -480,7 +486,7 @@ var construction = {
 
     buildRoadsFromMasterSpawnToExits: function(room) {
         // first let's check check highway
-        if (Memory.highway == null || !room.controller.my) {
+        if (Memory.highway == null || !room.controller || !room.controller.my) {
             // no highway just exit
             return;
         }
@@ -531,7 +537,7 @@ var construction = {
 
         // todo scan each side and build the wall
         const room = Game.rooms[roomName]; 
-        if (!room || !room.controller.my) {
+        if (!room || !room.controller || !room.controller.my) {
             return;
         }
         const t = room.getTerrain();
@@ -771,22 +777,16 @@ var construction = {
 
     generateThreads: function(room) {
         const roomName = room.name;
-        let name = 'construction-' + room.name + '-build_missing_spawn';
-        if (!os.existsThread(name)) {
-            const f = function() {
-                construction.build_missing_spawn(room.name);
-            } 
-            os.newThread(name, f, 5, true);
-        }
 
-        name = 'construction-' + room.name + '-build_aux';
+        let name = 'construction-' + room.name + '-build_aux';
         if (!os.existsThread(name)) {
             const f = function() {
                 const room = Game.rooms[roomName];
                 if (!room) {
                     return;
                 }
-                construction.buildSpawnCenter(room); // hanldes building the spawns
+                construction.build_missing_spawn(roomName);
+                construction.buildSpawnCenter(roomName); // hanldes building the spawns
                 construction.build_extensions(room); // hanldes building the extensions
                 // handles building the roads to extensions, towers, link near spawn, other center piece stuff
                 construction.buildAuxNearSpawn(room);
